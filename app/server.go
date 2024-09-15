@@ -27,7 +27,7 @@ func main() {
 
 	defer conn.Close()
 
-	if _, err := conn.Write([]byte("+PONG\\r\\n")); err != nil {
+	if _, err := conn.Write([]byte("+PONG\r	\n")); err != nil {
 		fmt.Println("Error writing to connection: ", err.Error())
 		os.Exit(1)
 	}
