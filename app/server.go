@@ -34,9 +34,4 @@ func main() {
 		fmt.Println("Error writing to connection: ", err.Error())
 		os.Exit(1)
 	}
-	err = c.Close()
-	if err != nil {
-		fmt.Println("Error closing the connection: ", err.Error())
-		os.Exit(1)
-	}
 }
