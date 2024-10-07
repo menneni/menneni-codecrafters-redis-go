@@ -27,7 +27,7 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		handleConnection(c)
+		go handleConnection(c)
 	}
 }
 
