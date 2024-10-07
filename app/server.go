@@ -34,19 +34,21 @@ func main() {
 func handleConnection(c net.Conn) {
 	defer c.Close()
 	// keep reading data and responding with pong from same connection
-	// read data
-	buf := make([]byte, 1024)
-	n, err := c.Read(buf)
-	if err != nil {
-		fmt.Println("Error reading connection: ", err.Error())
-		os.Exit(1)
-	}
+	for {
+		// read data
+		buf := make([]byte, 1024)
+		n, err := c.Read(buf)
+		if err != nil {
+			fmt.Println("Error reading connection: ", err.Error())
+			os.Exit(1)
+		}
 
-	fmt.Println("received data", string(buf[:n]))
+		fmt.Println("received data", string(buf[:n]))
 
-	_, err = c.Write([]byte("+PONG\r\n"))
-	if err != nil {
-		fmt.Println("Error writing to connection: ", err.Error())
-		os.Exit(1)
+		_, err = c.Write([]byte("+PONG\r\n"))
+		if err != nil {
+			fmt.Println("Error writing to connection: ", err.Error())
+			os.Exit(1)
+		}
 	}
 }
