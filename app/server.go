@@ -28,8 +28,8 @@ func main() {
 		fmt.Println("Error reading connection: ", err.Error())
 		os.Exit(1)
 	}
-	response := "+PONG\r\n"
-	_, err = c.Write([]byte(response))
+	defer c.Close()
+	_, err = c.Write([]byte("+PONG\r\n"))
 	if err != nil {
 		fmt.Println("Error writing to connection: ", err.Error())
 		os.Exit(1)
