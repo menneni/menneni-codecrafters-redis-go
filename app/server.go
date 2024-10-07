@@ -11,28 +11,42 @@ var _ = net.Listen
 var _ = os.Exit
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	listener, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
-		fmt.Println("Failed to bind to port 6379")
+		fmt.Println("Failed to bind to port 6379", err)
 		os.Exit(1)
 	}
-	c, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
-	}
+	defer listener.Close()
+	fmt.Println("Server is listening on port 6379")
+
 	for {
-		_, err = c.Read(make([]byte, 1024))
+		// block till we receive incoming connection from client
+		c, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error reading connection: ", err.Error())
+			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		_, err = c.Write([]byte("+PONG\r\n"))
-		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
-			os.Exit(1)
-		}
+		handleConnection(c)
+	}
+}
+
+func handleConnection(c net.Conn) {
+	defer c.Close()
+	// keep reading data and responding with pong from same connection
+	// read data
+	buf := make([]byte, 1024)
+	n, err := c.Read(buf)
+	if err != nil {
+		fmt.Println("Error reading connection: ", err.Error())
+		os.Exit(1)
+	}
+
+	fmt.Println("received data", string(buf[:n]))
+
+	_, err = c.Write([]byte("+PONG\r\n"))
+	if err != nil {
+		fmt.Println("Error writing to connection: ", err.Error())
+		os.Exit(1)
 	}
 }
