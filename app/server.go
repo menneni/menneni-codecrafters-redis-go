@@ -1,14 +1,17 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
 var _ = net.Listen
 var _ = os.Exit
+var myMap = make(map[string]interface{})
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
@@ -39,24 +42,80 @@ func handleConnection(c net.Conn) {
 		parser := NewRESPParser(c)
 
 		// Parse and output the result
-		result, err := parser.parse()
+		cmd, result, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
 			fmt.Printf("Parsed Result: %v\n", result)
 		}
 
-		if resultStr, ok := result.(string); ok {
-			_, err = c.Write([]byte(resultStr))
-			if err != nil {
-				fmt.Println("Error writing to connection: ", err.Error())
+		var resultStr string
+
+		switch cmd {
+		case Set:
+			mySlice, ok := result.([]string)
+			if ok {
+				myMap[mySlice[0]] = mySlice[1]
+				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
+			} else {
+				fmt.Println("result is not a slice of string", result)
 			}
-		} else {
-			fmt.Println("Error writing to connection: ", resultStr)
+			resultStr = sendOk()
+		case Get:
+			mySlice, ok := result.([]string)
+			if ok {
+				resultStr = mySlice[0]
+			} else {
+				fmt.Println("result is not a slice of string", result)
+			}
+			if val, ok := myMap[resultStr]; ok {
+				resultStr, err = sendBulkStringResp(val)
+				fmt.Println("found val for given key", resultStr)
+				if err != nil {
+					fmt.Println("Error writing to connection: ", err.Error())
+				}
+			} else {
+				resultStr = sendNullBulkString()
+			}
+		default:
+			if resultStr, ok := result.(string); ok {
+				if err != nil {
+					fmt.Println("Error writing to connection: ", err.Error())
+				}
+			} else {
+				fmt.Println("Error writing to connection: ", resultStr)
+			}
 		}
 
+		// write to connection
+		_, err = c.Write([]byte(resultStr))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
 		}
 	}
+}
+
+func sendOk() string {
+	return "+OK\r\n"
+}
+
+func sendNullBulkString() string {
+	return "$-1\r\n"
+}
+
+func sendSimpleStringResp(val interface{}) (string, error) {
+	if valStr, ok := val.(string); ok {
+		valStr = strings.Join([]string{"+", valStr, "\r\n"}, "")
+		return valStr, nil
+	}
+	return "", errors.New("invalid response from server")
+}
+
+func sendBulkStringResp(val interface{}) (string, error) {
+	if valStr, ok := val.(string); ok {
+		length := string(rune(len(valStr)))
+		valStr = strings.Join([]string{"$", length, "\r\n", valStr, "\r\n"}, "")
+		return valStr, nil
+	}
+	return "", errors.New("invalid response from server")
 }

@@ -14,7 +14,7 @@ func TestParser(t *testing.T) {
 	parser := NewRESPParser(input)
 
 	// Parse and output the result
-	result, err := parser.parse()
+	_, result, err := parser.parse()
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -36,7 +36,41 @@ func TestParser(t *testing.T) {
 		testInput := strings.NewReader(test)
 		parser := NewRESPParser(testInput)
 
-		result, err := parser.parse()
+		_, result, err := parser.parse()
+		if err != nil {
+			fmt.Println("Error:", err)
+		} else {
+			fmt.Printf("Parsed Result: %v\n", result)
+		}
+	}
+}
+
+func TestParserSetCmd(t *testing.T) {
+	// Testing with a multi-line RESP input string
+	input := strings.NewReader("SET Foo Bar")
+
+	// Initialize parser with input reader
+	parser := NewRESPParser(input)
+
+	// Parse and output the result
+	_, result, err := parser.parse()
+	if err != nil {
+		fmt.Println("Error:", err)
+	} else {
+		fmt.Printf("Parsed Result: %v\n", result)
+	}
+
+	// Test other RESP types and commands
+	tests := []string{
+		"SET Foo Bar2\r\n",
+		"GET Foo",
+	}
+
+	for _, test := range tests {
+		testInput := strings.NewReader(test)
+		parser := NewRESPParser(testInput)
+
+		_, result, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
