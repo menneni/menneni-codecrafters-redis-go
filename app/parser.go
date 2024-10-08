@@ -212,7 +212,7 @@ func (p *RESPParser) handleGet(result []interface{}) (interface{}, error) {
 	if len(result) != 2 {
 		return nil, errors.New("GET requires exactly one argument " + result[0].(string))
 	}
-	key := result[0].(string)
+	key := result[1].(string)
 	elements := make([]string, 0)
 	elements = append(elements, key)
 	return elements, nil
