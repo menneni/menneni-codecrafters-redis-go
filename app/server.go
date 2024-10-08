@@ -57,6 +57,7 @@ func handleConnection(cache *CacheWithTtl, c net.Conn) {
 		req, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
+			return
 		} else {
 			fmt.Printf("Parsed Result: %v\n", req)
 		}
