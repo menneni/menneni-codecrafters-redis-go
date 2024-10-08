@@ -143,10 +143,11 @@ func (p *RESPParser) parseArray() (interface{}, error) {
 func (p *RESPParser) handlePing(result []interface{}) (interface{}, error) {
 	if len(result) == 2 {
 		if arg, ok := result[1].(string); ok {
+			arg = strings.Join([]string{"+", arg, "\r\n"}, "")
 			return arg, nil
 		}
 	}
-	return "PONG", nil
+	return "+PONG\r\n", nil
 }
 
 func (p *RESPParser) handleEcho(result []interface{}) (interface{}, error) {
