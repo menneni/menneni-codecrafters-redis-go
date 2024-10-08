@@ -10,7 +10,6 @@ import (
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
 var _ = net.Listen
 var _ = os.Exit
-var myMap = make(map[string]interface{})
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
@@ -21,6 +20,8 @@ func main() {
 	}
 	defer listener.Close()
 	fmt.Println("Server is listening on port 6379")
+	// Create an expiring map
+	cache := NewCacheWithTtl()
 
 	for {
 		// block till we receive incoming connection from client
@@ -29,11 +30,11 @@ func main() {
 			fmt.Println("Error accepting connection: ", err.Error())
 			os.Exit(1)
 		}
-		go handleConnection(c)
+		go handleConnection(cache, c)
 	}
 }
 
-func handleConnection(c net.Conn) {
+func handleConnection(cache *CacheWithTtl, c net.Conn) {
 	defer c.Close()
 	// keep reading data and responding with pong from same connection
 	for {
@@ -54,7 +55,7 @@ func handleConnection(c net.Conn) {
 		case Set:
 			mySlice, ok := req.Args.([]string)
 			if ok {
-				myMap[mySlice[0]] = mySlice[1]
+				cache.Set(mySlice[0], mySlice[1], 0)
 				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
 			} else {
 				fmt.Println("result is not a slice of string", req.Args)
@@ -67,7 +68,7 @@ func handleConnection(c net.Conn) {
 			} else {
 				fmt.Println("result is not a slice of string", req.Args)
 			}
-			if val, ok := myMap[resultStr]; ok {
+			if val, ok := cache.Get(resultStr); ok {
 				resultStr, err = sendBulkStringResp(val)
 				fmt.Println("found val for given key", resultStr)
 				if err != nil {

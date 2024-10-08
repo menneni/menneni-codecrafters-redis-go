@@ -215,6 +215,10 @@ func (p *RESPParser) handleSet(result []interface{}) (interface{}, error) {
 	elements := make([]string, 0)
 	elements = append(elements, key)
 	elements = append(elements, value)
+	if len(result) == 5 {
+		elements = append(elements, result[3].(string))
+		elements = append(elements, result[4].(string))
+	}
 	return elements, nil
 
 }
