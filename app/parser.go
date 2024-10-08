@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -32,12 +31,6 @@ func NewRESPParser(r io.Reader) *RESPParser {
 }
 
 func (p *RESPParser) parse() (string, interface{}, error) {
-	cmd, res, err := p.parseCmd()
-	if !errors.Is(err, err_invalid_token) {
-		return cmd, res, err
-	}
-
-	// if not GET/SET command, proceed further
 	firstByte, err := p.reader.ReadByte()
 	if err != nil {
 		return "", nil, err
@@ -170,6 +163,12 @@ func (p *RESPParser) parseArray() (string, interface{}, error) {
 	case "PING":
 		res, err := p.handlePing(result)
 		return "PING", res, err
+	case "SET":
+		res, err := p.handleSet(result)
+		return "SET", res, err
+	case "GET":
+		res, err := p.handleGet(result)
+		return "GET", res, err
 	}
 
 	return "", result, nil
@@ -196,50 +195,25 @@ func (p *RESPParser) handleEcho(result []interface{}) (interface{}, error) {
 	return nil, errors.New("invalid argument for ECHO command" + result[1].(string))
 }
 
-func (p *RESPParser) handleSet() (interface{}, error) {
-	line, _ := p.reader.ReadString('\r')
-	parts := strings.Fields(line) // Split by whitespace
-	if len(parts) == 2 {
-		key := parts[0]
-		value := parts[1]
-		elements := make([]string, 0)
-		elements = append(elements, key)
-		elements = append(elements, value)
-		return elements, nil
-	} else {
-		fmt.Println("Invalid input")
-		return nil, errors.New("invalid input")
+func (p *RESPParser) handleSet(result []interface{}) (interface{}, error) {
+	if len(result) <= 2 {
+		return nil, errors.New("SET requires at least two arguments " + result[0].(string))
 	}
+	key := result[1].(string)
+	value := result[2].(string)
+	elements := make([]string, 0)
+	elements = append(elements, key)
+	elements = append(elements, value)
+	return elements, nil
 
 }
 
-func (p *RESPParser) handleGet() (interface{}, error) {
-	line, _ := p.reader.ReadString('\r')
-	value := strings.TrimSpace(line)
-	if len(value) > 0 {
-		elements := make([]string, 0)
-		elements = append(elements, value)
-		return elements, nil
-	} else {
-		fmt.Println("Invalid input")
-		return nil, errors.New("invalid input")
+func (p *RESPParser) handleGet(result []interface{}) (interface{}, error) {
+	if len(result) != 2 {
+		return nil, errors.New("GET requires exactly one argument " + result[0].(string))
 	}
-}
-
-func (p *RESPParser) parseCmd() (string, interface{}, error) {
-	line, err := p.readLine()
-	fmt.Printf("input cmd: %v", line)
-	if err != nil {
-		return "", nil, err
-	}
-	switch line {
-	case "SET":
-		res, err := p.handleSet()
-		return "SET", res, err
-	case "GET":
-		res, err := p.handleGet()
-		return "GET", res, err
-	default:
-		return "", nil, err_invalid_token
-	}
+	key := result[0].(string)
+	elements := make([]string, 0)
+	elements = append(elements, key)
+	return elements, nil
 }

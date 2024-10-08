@@ -47,25 +47,23 @@ func TestParser(t *testing.T) {
 
 func TestParserSetCmd(t *testing.T) {
 	// Testing with a multi-line RESP input string
-	input := strings.NewReader("SET Foo Bar")
+	input := strings.NewReader("*3\r\n$3\r\nSET\r\n$3\r\nFoo\r\n$3\r\nBar\r\n")
 
 	// Initialize parser with input reader
 	parser := NewRESPParser(input)
 
 	// Parse and output the result
-	_, result, err := parser.parse()
+	cmd, result, err := parser.parse()
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
-		fmt.Printf("Parsed Result: %v\n", result)
+		fmt.Printf("Parsed Result: %v %v\n", cmd, result)
 	}
 
 	// Test other RESP types and commands
 	tests := []string{
-		"SET Foo Bar2",
-		"GET Foo",
-		"SET pineapple strawberry",
-		"GET pineapple",
+		"*3\r\n$3\r\nSET\r\n$3\r\nFoo\r\n$3\r\nBar2\r\n",
+		"*2\r\n$3\r\nGET\r\n$3\r\nFoo\r\n",
 	}
 
 	for _, test := range tests {
