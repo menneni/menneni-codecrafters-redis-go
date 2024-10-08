@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
@@ -54,8 +57,14 @@ func handleConnection(cache *CacheWithTtl, c net.Conn) {
 		switch req.Cmd {
 		case Set:
 			mySlice, ok := req.Args.([]string)
-			if ok {
+			if ok && len(mySlice) == 2 {
 				cache.Set(mySlice[0], mySlice[1], 0)
+				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
+			} else if ok && len(mySlice) == 4 {
+				ttl, _ := strconv.Atoi(mySlice[3])
+				if strings.EqualFold(mySlice[2], "px") {
+					cache.Set(mySlice[0], mySlice[1], time.Duration(ttl)*time.Second)
+				}
 				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
 			} else {
 				fmt.Println("result is not a slice of string", req.Args)
