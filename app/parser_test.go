@@ -14,11 +14,11 @@ func TestParser(t *testing.T) {
 	parser := NewRESPParser(input)
 
 	// Parse and output the result
-	_, result, err := parser.parse()
+	req, err := parser.parse()
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
-		fmt.Printf("Parsed Result: %v\n", result)
+		fmt.Printf("Parsed Result: %v\n", req)
 	}
 
 	// Test other RESP types and commands
@@ -37,11 +37,11 @@ func TestParser(t *testing.T) {
 		testInput := strings.NewReader(test)
 		parser := NewRESPParser(testInput)
 
-		_, result, err := parser.parse()
+		req, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
-			fmt.Printf("Parsed Result: %v\n", result)
+			fmt.Printf("Parsed Result: %v\n", req)
 		}
 	}
 }
@@ -54,11 +54,11 @@ func TestParserSetCmd(t *testing.T) {
 	parser := NewRESPParser(input)
 
 	// Parse and output the result
-	cmd, result, err := parser.parse()
+	req, err := parser.parse()
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
-		fmt.Printf("Parsed Result: %v %v\n", cmd, result)
+		fmt.Printf("Parsed Result: %v %v\n", req.Cmd, req.Args)
 	}
 
 	// Test other RESP types and commands
@@ -71,11 +71,11 @@ func TestParserSetCmd(t *testing.T) {
 		testInput := strings.NewReader(test)
 		parser := NewRESPParser(testInput)
 
-		cmd, result, err := parser.parse()
+		req, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
-			fmt.Printf("Parsed Result: %v %v\n", cmd, result)
+			fmt.Printf("Parsed Result: %v %v\n", req.Cmd, req.Args)
 		}
 	}
 }

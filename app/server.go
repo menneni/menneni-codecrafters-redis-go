@@ -41,31 +41,31 @@ func handleConnection(c net.Conn) {
 		parser := NewRESPParser(c)
 
 		// Parse and output the result
-		cmd, result, err := parser.parse()
+		req, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
-			fmt.Printf("Parsed Result: %v\n", result)
+			fmt.Printf("Parsed Result: %v\n", req)
 		}
 
 		var resultStr string
 
-		switch cmd {
+		switch req.Cmd {
 		case Set:
-			mySlice, ok := result.([]string)
+			mySlice, ok := req.Args.([]string)
 			if ok {
 				myMap[mySlice[0]] = mySlice[1]
 				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
 			} else {
-				fmt.Println("result is not a slice of string", result)
+				fmt.Println("result is not a slice of string", req.Args)
 			}
 			resultStr = sendOk()
 		case Get:
-			mySlice, ok := result.([]string)
+			mySlice, ok := req.Args.([]string)
 			if ok {
 				resultStr = mySlice[0]
 			} else {
-				fmt.Println("result is not a slice of string", result)
+				fmt.Println("result is not a slice of string", req.Args)
 			}
 			if val, ok := myMap[resultStr]; ok {
 				resultStr, err = sendBulkStringResp(val)
@@ -78,7 +78,7 @@ func handleConnection(c net.Conn) {
 			}
 		default:
 			var ok bool
-			if resultStr, ok = result.(string); !ok {
+			if resultStr, ok = req.Args.(string); !ok {
 				fmt.Println("Error writing to connection: ", err.Error())
 			}
 		}

@@ -30,29 +30,40 @@ func NewRESPParser(r io.Reader) *RESPParser {
 	return &RESPParser{reader: bufio.NewReader(r)}
 }
 
-func (p *RESPParser) parse() (string, interface{}, error) {
+type Request struct {
+	Cmd  string
+	Args interface{}
+}
+
+func (p *RESPParser) parse() (*Request, error) {
 	firstByte, err := p.reader.ReadByte()
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 	switch firstByte {
 	case SimpleString:
 		res, err := p.parseSimpleString()
-		return "SimpleString", res, err
+		return &Request{
+			Cmd: "SimpleString", Args: res,
+		}, err
 	case ErrorString:
 		res, err := p.parseErrorString()
-		return "ErrorString", res, err
+		return &Request{
+			Cmd: "ErrorString", Args: res}, err
 	case Integer:
 		res, err := p.parseInteger()
-		return "Integer", res, err
+		return &Request{
+			Cmd: "Integer", Args: res}, err
 	case BulkString:
 		res, err := p.parseBulkString()
-		return "BulkString", res, err
+		return &Request{
+			Cmd: "BulkString", Args: res}, err
 	case Array:
 		cmd, res, err := p.parseArray()
-		return cmd, res, err
+		return &Request{
+			Cmd: cmd, Args: res}, err
 	default:
-		return "", nil, err_invalid_token
+		return nil, err_invalid_token
 	}
 }
 
@@ -147,11 +158,11 @@ func (p *RESPParser) parseArray() (string, interface{}, error) {
 
 	result := make([]interface{}, length)
 	for i := 0; i < length; i++ {
-		_, elem, err := p.parse()
+		req, err := p.parse()
 		if err != nil {
 			return "", nil, err
 		}
-		result[i] = elem
+		result[i] = req.Args
 	}
 
 	// check for commands
