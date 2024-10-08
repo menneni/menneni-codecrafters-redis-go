@@ -154,6 +154,7 @@ func (p *RESPParser) handleEcho(result []interface{}) (interface{}, error) {
 		return nil, errors.New("ECHO requires exactly one argument " + result[0].(string))
 	}
 	if arg, ok := result[1].(string); ok {
+		arg = strings.Join([]string{"+", arg, "\r\n"}, "")
 		return arg, nil
 	}
 	return nil, errors.New("invalid argument for ECHO command" + result[1].(string))
