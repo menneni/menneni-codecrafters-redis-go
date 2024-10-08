@@ -36,15 +36,25 @@ func handleConnection(c net.Conn) {
 	// keep reading data and responding with pong from same connection
 	for {
 		// read data
-		buf := make([]byte, 1024)
-		n, err := c.Read(buf)
+		parser := NewRESPParser(c)
+
+		// Parse and output the result
+		result, err := parser.parse()
 		if err != nil {
-			fmt.Println("Error reading connection: ", err.Error())
+			fmt.Println("Error:", err)
+		} else {
+			fmt.Printf("Parsed Result: %v\n", result)
 		}
 
-		fmt.Println("received data", string(buf[:n]))
+		if resultStr, ok := result.(string); ok {
+			_, err = c.Write([]byte(resultStr))
+			if err != nil {
+				fmt.Println("Error writing to connection: ", err.Error())
+			}
+		} else {
+			fmt.Println("Error writing to connection: ", resultStr)
+		}
 
-		_, err = c.Write([]byte("+PONG\r\n"))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
 		}
