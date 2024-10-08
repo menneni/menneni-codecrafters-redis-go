@@ -12,7 +12,6 @@ import (
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
 var _ = net.Listen
-var _ = os.Exit
 
 func main() {
 	fmt.Println("Logs from your program will appear here!")
@@ -21,7 +20,12 @@ func main() {
 		fmt.Println("Failed to bind to port 6379", err)
 		os.Exit(1)
 	}
-	defer listener.Close()
+	defer func(listener net.Listener) {
+		err := listener.Close()
+		if err != nil {
+			fmt.Println("Failed to close listener", err)
+		}
+	}(listener)
 	fmt.Println("Server is listening on port 6379")
 	// Create an expiring map
 	cache := NewCacheWithTtl()
@@ -38,7 +42,12 @@ func main() {
 }
 
 func handleConnection(cache *CacheWithTtl, c net.Conn) {
-	defer c.Close()
+	defer func(c net.Conn) {
+		err := c.Close()
+		if err != nil {
+			fmt.Println("Error closing connection: ", err.Error())
+		}
+	}(c)
 	// keep reading data and responding with pong from same connection
 	for {
 		// read data
