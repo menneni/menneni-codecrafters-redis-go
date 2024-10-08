@@ -63,7 +63,7 @@ func handleConnection(cache *CacheWithTtl, c net.Conn) {
 			} else if ok && len(mySlice) == 4 {
 				ttl, _ := strconv.Atoi(mySlice[3])
 				if strings.EqualFold(mySlice[2], "px") {
-					cache.Set(mySlice[0], mySlice[1], time.Duration(ttl)*time.Second)
+					cache.Set(mySlice[0], mySlice[1], time.Duration(ttl)*time.Millisecond)
 				}
 				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
 			} else {
