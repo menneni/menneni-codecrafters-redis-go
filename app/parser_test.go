@@ -23,13 +23,14 @@ func TestParser(t *testing.T) {
 
 	// Test other RESP types and commands
 	tests := []string{
+		"*2\r\nPING\r\n",
+		"*2\r\n$4\r\nPING\r\n$5\r\nHello\r\n",
+		"*2\r\n$4\r\nECHO\r\n$5\r\nworld\r\n",
+		"*2\r\n$4\r\nECHO\r\n$9\r\npineapple\r\n",
 		"+OK\r\n",
 		":1000\r\n",
 		"$6\r\nfoobar\r\n",
 		"-Error message\r\n",
-		"*2\r\nPING\r\n",
-		"*2\r\n$4\r\nPING\r\n$5\r\nHello\r\n",
-		"*2\r\n$4\r\nECHO\r\n$5\r\nworld\r\n",
 	}
 
 	for _, test := range tests {

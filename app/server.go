@@ -77,12 +77,9 @@ func handleConnection(c net.Conn) {
 				resultStr = sendNullBulkString()
 			}
 		default:
-			if resultStr, ok := result.(string); ok {
-				if err != nil {
-					fmt.Println("Error writing to connection: ", err.Error())
-				}
-			} else {
-				fmt.Println("Error writing to connection: ", resultStr)
+			var ok bool
+			if resultStr, ok = result.(string); !ok {
+				fmt.Println("Error writing to connection: ", err.Error())
 			}
 		}
 
