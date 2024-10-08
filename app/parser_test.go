@@ -62,19 +62,21 @@ func TestParserSetCmd(t *testing.T) {
 
 	// Test other RESP types and commands
 	tests := []string{
-		"SET Foo Bar2\r\n",
+		"SET Foo Bar2",
 		"GET Foo",
+		"SET pineapple strawberry",
+		"GET pineapple",
 	}
 
 	for _, test := range tests {
 		testInput := strings.NewReader(test)
 		parser := NewRESPParser(testInput)
 
-		_, result, err := parser.parse()
+		cmd, result, err := parser.parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
-			fmt.Printf("Parsed Result: %v\n", result)
+			fmt.Printf("Parsed Result: %v %v\n", cmd, result)
 		}
 	}
 }

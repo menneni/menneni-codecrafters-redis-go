@@ -197,7 +197,7 @@ func (p *RESPParser) handleEcho(result []interface{}) (interface{}, error) {
 }
 
 func (p *RESPParser) handleSet() (interface{}, error) {
-	line, _ := p.reader.ReadString('\n')
+	line, _ := p.reader.ReadString('\r')
 	parts := strings.Fields(line) // Split by whitespace
 	if len(parts) == 2 {
 		key := parts[0]
@@ -227,7 +227,8 @@ func (p *RESPParser) handleGet() (interface{}, error) {
 }
 
 func (p *RESPParser) parseCmd() (string, interface{}, error) {
-	line, err := p.readWord()
+	line, err := p.readLine()
+	fmt.Printf("input cmd: %v", line)
 	if err != nil {
 		return "", nil, err
 	}
