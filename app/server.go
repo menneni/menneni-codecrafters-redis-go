@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
@@ -105,17 +104,14 @@ func sendNullBulkString() string {
 
 func sendSimpleStringResp(val interface{}) (string, error) {
 	if valStr, ok := val.(string); ok {
-		valStr = strings.Join([]string{"+", valStr, "\r\n"}, "")
-		return valStr, nil
+		return fmt.Sprintf("+%s\r\n", valStr), nil
 	}
 	return "", errors.New("invalid response from server")
 }
 
 func sendBulkStringResp(val interface{}) (string, error) {
 	if valStr, ok := val.(string); ok {
-		length := string(rune(len(valStr)))
-		valStr = strings.Join([]string{"$", length, "\r\n", valStr, "\r\n"}, "")
-		return valStr, nil
+		return fmt.Sprintf("$%d\r\n%s\r\n", len(valStr), valStr), nil
 	}
 	return "", errors.New("invalid response from server")
 }

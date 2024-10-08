@@ -214,7 +214,7 @@ func (p *RESPParser) handleSet() (interface{}, error) {
 }
 
 func (p *RESPParser) handleGet() (interface{}, error) {
-	line, _ := p.reader.ReadString('\n')
+	line, _ := p.reader.ReadString('\r')
 	value := strings.TrimSpace(line)
 	if len(value) > 0 {
 		elements := make([]string, 0)
