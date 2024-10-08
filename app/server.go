@@ -31,7 +31,7 @@ func main() {
 		c, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
+			continue
 		}
 		go handleConnection(cache, c)
 	}
