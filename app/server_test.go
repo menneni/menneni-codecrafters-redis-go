@@ -26,7 +26,7 @@ func TestServer(t *testing.T) {
 		},
 		{
 			name:     "Valid SET without expiry",
-			input:    "*3\r\n$3\r\nSET\r\n$4\r\napple\r\n$5\r\nfruit\r\n",
+			input:    "*3\r\n$3\r\nSET\r\n$5\r\napple\r\n$5\r\nfruit\r\n",
 			expected: "+OK\r\n",
 			cacheKey: "apple",
 			cacheVal: "fruit",

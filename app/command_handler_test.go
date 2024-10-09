@@ -9,7 +9,7 @@ func TestHandleSet(t *testing.T) {
 	cache := NewCacheWithTTL()
 
 	// Test basic SET command
-	req := &RESPRequest{Args: []string{"SET", "foo", "bar"}}
+	req := &RESPRequest{Args: []interface{}{"SET", "foo", "bar"}}
 	resp, err := HandleRequest(cache, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -25,7 +25,7 @@ func TestHandleSet(t *testing.T) {
 	}
 
 	// Test SET command with expiry (px)
-	req = &RESPRequest{Args: []string{"SET", "key", "value", "px", "100"}}
+	req = &RESPRequest{Args: []interface{}{"SET", "key", "value", "px", "100"}}
 	resp, err = HandleRequest(cache, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -47,7 +47,7 @@ func TestHandleGet(t *testing.T) {
 	cache.Set("foo", "bar", 0)
 
 	// Test GET existing key
-	req := &RESPRequest{Args: []string{"GET", "foo"}}
+	req := &RESPRequest{Args: []interface{}{"GET", "foo"}}
 	resp, err := HandleRequest(cache, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -58,7 +58,7 @@ func TestHandleGet(t *testing.T) {
 	}
 
 	// Test GET non-existing key
-	req = &RESPRequest{Args: []string{"GET", "unknown"}}
+	req = &RESPRequest{Args: []interface{}{"GET", "unknown"}}
 	resp, err = HandleRequest(cache, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -71,7 +71,7 @@ func TestHandleGet(t *testing.T) {
 
 func TestHandlePing(t *testing.T) {
 	// Test PING without message
-	req := &RESPRequest{Args: []string{"PING"}}
+	req := &RESPRequest{Args: []interface{}{"PING"}}
 	resp, err := HandleRequest(nil, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -82,7 +82,7 @@ func TestHandlePing(t *testing.T) {
 	}
 
 	// Test PING with message
-	req = &RESPRequest{Args: []string{"PING", "Hello"}}
+	req = &RESPRequest{Args: []interface{}{"PING", "Hello"}}
 	resp, err = HandleRequest(nil, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -95,7 +95,7 @@ func TestHandlePing(t *testing.T) {
 
 func TestHandleEcho(t *testing.T) {
 	// Test ECHO with a message
-	req := &RESPRequest{Args: []string{"ECHO", "Hello, world!"}}
+	req := &RESPRequest{Args: []interface{}{"ECHO", "Hello, world!"}}
 	resp, err := HandleRequest(nil, req)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -108,7 +108,7 @@ func TestHandleEcho(t *testing.T) {
 
 func TestInvalidCommand(t *testing.T) {
 	// Test unknown command
-	req := &RESPRequest{Args: []string{"INVALID"}}
+	req := &RESPRequest{Args: []interface{}{"INVALID"}}
 	_, err := HandleRequest(nil, req)
 	if err == nil {
 		t.Fatal("Expected error for unknown command, got none")
