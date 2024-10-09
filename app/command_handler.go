@@ -17,7 +17,7 @@ const (
 
 // HandleRequest processes incoming RESP commands
 func HandleRequest(c *CacheWithTTL, req *RESPRequest) (string, error) {
-	args, ok := req.Args.([]string)
+	args, ok := req.Args.([]interface{})
 	if !ok {
 		return "", errors.New("invalid args")
 	}
@@ -35,17 +35,17 @@ func HandleRequest(c *CacheWithTTL, req *RESPRequest) (string, error) {
 	}
 }
 
-func handleSet(c *CacheWithTTL, args []string) (string, error) {
+func handleSet(c *CacheWithTTL, args []interface{}) (string, error) {
 	if len(args) < 3 {
 		return "", fmt.Errorf("invalid number of arguments for SET")
 	}
 
-	key := args[1]
-	value := args[2]
+	key := args[1].(string)
+	value := args[2].(string)
 
 	// Check if TTL is provided
-	if len(args) == 5 && strings.EqualFold(args[3], "px") {
-		ttl, err := strconv.Atoi(args[4])
+	if len(args) == 5 && strings.EqualFold(args[3].(string), "px") {
+		ttl, err := strconv.Atoi(args[4].(string))
 		if err != nil {
 			return "", fmt.Errorf("invalid TTL value")
 		}
@@ -57,12 +57,12 @@ func handleSet(c *CacheWithTTL, args []string) (string, error) {
 	return "+OK\r\n", nil
 }
 
-func handleGet(c *CacheWithTTL, args []string) (string, error) {
+func handleGet(c *CacheWithTTL, args []interface{}) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("invalid number of arguments for GET")
 	}
 
-	key := args[1]
+	key := args[1].(string)
 	value, found := c.Get(key)
 	if !found {
 		return "$-1\r\n", nil
@@ -76,16 +76,16 @@ func handleGet(c *CacheWithTTL, args []string) (string, error) {
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(valStr), valStr), nil
 }
 
-func handlePing(args []string) (string, error) {
+func handlePing(args []interface{}) (string, error) {
 	if len(args) > 1 {
 		return fmt.Sprintf("+%s\r\n", args[1]), nil
 	}
 	return "+PONG\r\n", nil
 }
 
-func handleEcho(args []string) (string, error) {
+func handleEcho(args []interface{}) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("ECHO requires an argument")
 	}
-	return fmt.Sprintf("$%d\r\n%s\r\n", len(args[1]), args[1]), nil
+	return fmt.Sprintf("$%d\r\n%s\r\n", len(args[1].(string)), args[1].(string)), nil
 }
