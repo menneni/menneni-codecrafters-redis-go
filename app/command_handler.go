@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,31 +17,35 @@ const (
 
 // HandleRequest processes incoming RESP commands
 func HandleRequest(c *CacheWithTTL, req *RESPRequest) (string, error) {
-	switch req.Cmd {
+	args, ok := req.Args.([]string)
+	if !ok {
+		return "", errors.New("invalid args")
+	}
+	switch args[0] {
 	case Set:
-		return handleSet(c, req.Args)
+		return handleSet(c, args)
 	case Get:
-		return handleGet(c, req.Args)
+		return handleGet(c, args)
 	case Ping:
-		return handlePing(req.Args)
+		return handlePing(args)
 	case Echo:
-		return handleEcho(req.Args)
+		return handleEcho(args)
 	default:
-		return "", fmt.Errorf("unknown command: %s", req.Cmd)
+		return "", fmt.Errorf("unknown command: %s", args[0])
 	}
 }
 
-func handleSet(c *CacheWithTTL, args []interface{}) (string, error) {
-	if len(args) < 2 {
+func handleSet(c *CacheWithTTL, args []string) (string, error) {
+	if len(args) < 3 {
 		return "", fmt.Errorf("invalid number of arguments for SET")
 	}
 
-	key := args[0].(string)
-	value := args[1].(string)
+	key := args[1]
+	value := args[2]
 
 	// Check if TTL is provided
-	if len(args) == 4 && strings.EqualFold(args[2].(string), "px") {
-		ttl, err := strconv.Atoi(args[3].(string))
+	if len(args) == 5 && strings.EqualFold(args[3], "px") {
+		ttl, err := strconv.Atoi(args[4])
 		if err != nil {
 			return "", fmt.Errorf("invalid TTL value")
 		}
@@ -52,12 +57,12 @@ func handleSet(c *CacheWithTTL, args []interface{}) (string, error) {
 	return "+OK\r\n", nil
 }
 
-func handleGet(c *CacheWithTTL, args []interface{}) (string, error) {
-	if len(args) < 1 {
+func handleGet(c *CacheWithTTL, args []string) (string, error) {
+	if len(args) < 2 {
 		return "", fmt.Errorf("invalid number of arguments for GET")
 	}
 
-	key := args[0].(string)
+	key := args[1]
 	value, found := c.Get(key)
 	if !found {
 		return "$-1\r\n", nil
@@ -71,16 +76,16 @@ func handleGet(c *CacheWithTTL, args []interface{}) (string, error) {
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(valStr), valStr), nil
 }
 
-func handlePing(args []interface{}) (string, error) {
-	if len(args) > 0 {
-		return fmt.Sprintf("+%s\r\n", args[0].(string)), nil
+func handlePing(args []string) (string, error) {
+	if len(args) > 1 {
+		return fmt.Sprintf("+%s\r\n", args[1]), nil
 	}
 	return "+PONG\r\n", nil
 }
 
-func handleEcho(args []interface{}) (string, error) {
-	if len(args) < 1 {
+func handleEcho(args []string) (string, error) {
+	if len(args) < 2 {
 		return "", fmt.Errorf("ECHO requires an argument")
 	}
-	return fmt.Sprintf("$%d\r\n%s\r\n", len(args[0].(string)), args[0].(string)), nil
+	return fmt.Sprintf("$%d\r\n%s\r\n", len(args[1]), args[1]), nil
 }

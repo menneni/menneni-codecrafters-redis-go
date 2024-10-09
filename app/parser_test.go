@@ -1,81 +1,32 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
 
-func TestParser(t *testing.T) {
-	// Testing with a multi-line RESP input string
-	input := strings.NewReader("*2\r\n$4\r\nECHO\r\n$5\r\nHello\r\n")
+func TestParseSetWithPX(t *testing.T) {
+	input := "*5\r\n$3\r\nSET\r\n$4\r\npear\r\n$6\r\norange\r\n$2\r\npx\r\n$3\r\n100\r\n" // SET pear pear PX 100
+	reader := strings.NewReader(input)
+	parser := NewRESPParser(reader)
 
-	// Initialize parser with input reader
-	parser := NewRESPParser(input)
-
-	// Parse and output the result
 	req, err := parser.Parse()
 	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Printf("Parsed Result: %v\n", req)
+		t.Fatalf("expected no error, got %v", err.Error())
 	}
 
-	// Test other RESP types and commands
-	tests := []string{
-		"*1\r\n$4\r\nPING\r\n",
-		"*2\r\n$4\r\nPING\r\n$5\r\nHello\r\n",
-		"*2\r\n$4\r\nECHO\r\n$5\r\nworld\r\n",
-		"*2\r\n$4\r\nECHO\r\n$9\r\npineapple\r\n",
-		"+OK\r\n",
-		":1000\r\n",
-		"$6\r\nfoobar\r\n",
-		"-Error message\r\n",
+	expectedArgs := []string{"SET", "pear", "orange", "px", "100"}
+	args, ok := req.Args.([]interface{})
+	if !ok {
+		t.Fatalf("type mismatch, expected array of arguments, got %v", req.Args)
+	}
+	if len(args) != len(expectedArgs) {
+		t.Fatalf("expected %d arguments, got %d", len(expectedArgs), len(args))
 	}
 
-	for _, test := range tests {
-		testInput := strings.NewReader(test)
-		parser := NewRESPParser(testInput)
-
-		req, err := parser.Parse()
-		if err != nil {
-			fmt.Println("Error:", err)
-		} else {
-			fmt.Printf("Parsed Result: %v\n", req)
-		}
-	}
-}
-
-func TestParserSetCmd(t *testing.T) {
-	// Testing with a multi-line RESP input string
-	input := strings.NewReader("*3\r\n$3\r\nSET\r\n$3\r\nFoo\r\n$3\r\nBar\r\n")
-
-	// Initialize parser with input reader
-	parser := NewRESPParser(input)
-
-	// Parse and output the result
-	req, err := parser.Parse()
-	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Printf("Parsed Result: %v %v\n", req.Cmd, req.Args)
-	}
-
-	// Test other RESP types and commands
-	tests := []string{
-		"*3\r\n$3\r\nSET\r\n$3\r\nFoo\r\n$3\r\nBar2\r\n",
-		"*2\r\n$3\r\nGET\r\n$3\r\nFoo\r\n",
-	}
-
-	for _, test := range tests {
-		testInput := strings.NewReader(test)
-		parser := NewRESPParser(testInput)
-
-		req, err := parser.Parse()
-		if err != nil {
-			fmt.Println("Error:", err)
-		} else {
-			fmt.Printf("Parsed Result: %v %v\n", req.Cmd, req.Args)
+	for i, arg := range args {
+		if arg != expectedArgs[i] {
+			t.Errorf("expected arg %d to be %q, got %q", i, expectedArgs[i], arg)
 		}
 	}
 }
