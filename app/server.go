@@ -1,134 +1,60 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-
 func main() {
-	fmt.Println("Logs from your program will appear here!")
+	fmt.Println("Starting Redis-like server on 127.0.0.1:6379")
 	listener, err := net.Listen("tcp", "127.0.0.1:6379")
 	if err != nil {
-		fmt.Println("Failed to bind to port 6379", err)
+		fmt.Println("Failed to start server:", err)
 		os.Exit(1)
 	}
-	defer func(listener net.Listener) {
-		err := listener.Close()
-		if err != nil {
-			fmt.Println("Failed to close listener", err)
-		}
-	}(listener)
-	fmt.Println("Server is listening on port 6379")
-	// Create an expiring map
-	cache := NewCacheWithTtl()
+	defer listener.Close()
 
+	// Create the cache with TTL
+	cache := NewCacheWithTTL()
+	startServer(listener, cache)
+}
+
+func startServer(listener net.Listener, cache *CacheWithTTL) {
 	for {
-		// block till we receive incoming connection from client
-		c, err := listener.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Error accepting connection: ", err.Error())
+			fmt.Println("Error accepting connection:", err)
 			continue
 		}
-		go handleConnection(cache, c)
+		go handleConnection(conn, cache)
 	}
 }
 
-func handleConnection(cache *CacheWithTtl, c net.Conn) {
-	defer func(c net.Conn) {
-		err := c.Close()
-		if err != nil {
-			fmt.Println("Error closing connection: ", err.Error())
-		}
-	}(c)
-	// keep reading data and responding with pong from same connection
+func handleConnection(conn net.Conn, cache *CacheWithTTL) {
+	defer conn.Close()
+
+	parser := NewRESPParser(conn)
 	for {
-		// read data
-		parser := NewRESPParser(c)
-
-		// Parse and output the result
-		req, err := parser.parse()
+		req, err := parser.Parse()
 		if err != nil {
-			fmt.Println("Error:", err)
+			fmt.Println("Error parsing request:", err)
 			return
-		} else {
-			fmt.Printf("Parsed Result: %v\n", req)
 		}
 
-		var resultStr string
-
-		switch req.Cmd {
-		case Set:
-			mySlice, ok := req.Args.([]string)
-			if ok && len(mySlice) == 2 {
-				cache.Set(mySlice[0], mySlice[1], 0)
-				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
-			} else if ok && len(mySlice) == 4 {
-				ttl, _ := strconv.Atoi(mySlice[3])
-				if strings.EqualFold(mySlice[2], "px") {
-					cache.Set(mySlice[0], mySlice[1], time.Duration(ttl)*time.Millisecond)
-				}
-				fmt.Printf("Setting %s to %s\n", mySlice[0], mySlice[1])
-			} else {
-				fmt.Println("result is not a slice of string", req.Args)
-			}
-			resultStr = sendOk()
-		case Get:
-			mySlice, ok := req.Args.([]string)
-			if ok {
-				resultStr = mySlice[0]
-			} else {
-				fmt.Println("result is not a slice of string", req.Args)
-			}
-			if val, ok := cache.Get(resultStr); ok {
-				resultStr, err = sendBulkStringResp(val)
-				fmt.Println("found val for given key", resultStr)
-				if err != nil {
-					fmt.Println("Error writing to connection: ", err.Error())
-				}
-			} else {
-				resultStr = sendNullBulkString()
-			}
-		default:
-			var ok bool
-			if resultStr, ok = req.Args.(string); !ok {
-				fmt.Println("Error writing to connection: ", err.Error())
-			}
-		}
-
-		// write to connection
-		_, err = c.Write([]byte(resultStr))
+		response, err := HandleRequest(cache, req)
 		if err != nil {
-			fmt.Println("Error writing to connection: ", err.Error())
+			fmt.Println("Error handling request:", err)
+			return
 		}
+
+		writeResponse(conn, err, response)
 	}
 }
 
-func sendOk() string {
-	return "+OK\r\n"
-}
-
-func sendNullBulkString() string {
-	return "$-1\r\n"
-}
-
-func sendSimpleStringResp(val interface{}) (string, error) {
-	if valStr, ok := val.(string); ok {
-		return fmt.Sprintf("+%s\r\n", valStr), nil
+func writeResponse(conn net.Conn, err error, response string) {
+	_, err = conn.Write([]byte(response))
+	if err != nil {
+		fmt.Println("Error writing response:", err)
 	}
-	return "", errors.New("invalid response from server")
-}
-
-func sendBulkStringResp(val interface{}) (string, error) {
-	if valStr, ok := val.(string); ok {
-		return fmt.Sprintf("$%d\r\n%s\r\n", len(valStr), valStr), nil
-	}
-	return "", errors.New("invalid response from server")
 }

@@ -7,7 +7,7 @@ import (
 
 // TestExpiringMapSetAndGet tests setting and getting a value from the expiring map.
 func TestExpiringMapSetAndGet(t *testing.T) {
-	cache := NewCacheWithTtl()
+	cache := NewCacheWithTTL()
 
 	// Set a key with a 2-second TTL
 	cache.Set("foo", "bar", 2*time.Second)

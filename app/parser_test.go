@@ -14,7 +14,7 @@ func TestParser(t *testing.T) {
 	parser := NewRESPParser(input)
 
 	// Parse and output the result
-	req, err := parser.parse()
+	req, err := parser.Parse()
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -37,7 +37,7 @@ func TestParser(t *testing.T) {
 		testInput := strings.NewReader(test)
 		parser := NewRESPParser(testInput)
 
-		req, err := parser.parse()
+		req, err := parser.Parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {
@@ -54,7 +54,7 @@ func TestParserSetCmd(t *testing.T) {
 	parser := NewRESPParser(input)
 
 	// Parse and output the result
-	req, err := parser.parse()
+	req, err := parser.Parse()
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else {
@@ -71,7 +71,7 @@ func TestParserSetCmd(t *testing.T) {
 		testInput := strings.NewReader(test)
 		parser := NewRESPParser(testInput)
 
-		req, err := parser.parse()
+		req, err := parser.Parse()
 		if err != nil {
 			fmt.Println("Error:", err)
 		} else {

@@ -3,232 +3,114 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
 )
 
-// token types for RESP Protocol
-const (
-	SimpleString = '+'
-	ErrorString  = '-'
-	Integer      = ':'
-	BulkString   = '$'
-	Array        = '*'
-	Set          = "SET"
-	Get          = "GET"
+var (
+	ErrInvalidCommand = errors.New("invalid RESP command")
 )
 
-var err_invalid_token = errors.New("invalid token")
+type RESPRequest struct {
+	Cmd  string
+	Args []interface{}
+}
 
 type RESPParser struct {
 	reader *bufio.Reader
 }
 
-// NewRESPParser returns a new instance of RESPParser
+// NewRESPParser creates a new RESP parser
 func NewRESPParser(r io.Reader) *RESPParser {
-	return &RESPParser{reader: bufio.NewReader(r)}
+	return &RESPParser{
+		reader: bufio.NewReader(r),
+	}
 }
 
-type Request struct {
-	Cmd  string
-	Args interface{}
-}
-
-func (p *RESPParser) parse() (*Request, error) {
-	firstByte, err := p.reader.ReadByte()
+// Parse parses a RESP request from the connection
+func (p *RESPParser) Parse() (*RESPRequest, error) {
+	line, err := p.reader.ReadString('\n')
 	if err != nil {
 		return nil, err
 	}
-	switch firstByte {
-	case SimpleString:
-		res, err := p.parseSimpleString()
-		return &Request{
-			Cmd: "SimpleString", Args: res,
-		}, err
-	case ErrorString:
-		res, err := p.parseErrorString()
-		return &Request{
-			Cmd: "ErrorString", Args: res}, err
-	case Integer:
-		res, err := p.parseInteger()
-		return &Request{
-			Cmd: "Integer", Args: res}, err
-	case BulkString:
-		res, err := p.parseBulkString()
-		return &Request{
-			Cmd: "BulkString", Args: res}, err
-	case Array:
-		cmd, res, err := p.parseArray()
-		return &Request{
-			Cmd: cmd, Args: res}, err
+	line = strings.TrimSpace(line)
+
+	if len(line) < 1 {
+		return nil, ErrInvalidCommand
+	}
+
+	switch line[0] {
+	case '*': // Array (Command and Arguments)
+		return p.parseArray()
+	case '+': // Simple String
+		return p.parseSimpleString(line)
+	case '$': // Bulk String
+		return p.parseBulkString(line)
+	case ':': // Integer
+		return p.parseInteger(line)
+	case '-': // Error
+		return nil, fmt.Errorf("RESP error: %s", line[1:])
 	default:
-		return nil, err_invalid_token
+		return nil, ErrInvalidCommand
 	}
 }
 
-// Helper function to read a line and trim CRLF
-func (p *RESPParser) readLine() (string, error) {
-	line, err := p.reader.ReadString('\n')
+func (p *RESPParser) parseArray() (*RESPRequest, error) {
+	sizeStr, err := p.reader.ReadString('\n')
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return strings.TrimSuffix(line, "\r\n"), nil
-}
 
-// Helper function to read a line and trim CRLF
-func (p *RESPParser) readWord() (string, error) {
-	line, err := p.reader.ReadString(' ')
+	size, err := strconv.Atoi(strings.TrimSpace(sizeStr))
 	if err != nil {
-		return "", err
-	}
-	return strings.TrimSuffix(line, " "), nil
-}
-
-// Helper function to read a line and trim CRLF
-func (p *RESPParser) readEOL() (string, error) {
-	line, err := p.reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSuffix(line, "\n"), nil
-}
-
-func (p *RESPParser) parseSimpleString() (string, error) {
-	line, err := p.readLine()
-	if err != nil {
-		return "", err
-	}
-	return line, nil
-}
-
-func (p *RESPParser) parseErrorString() (string, error) {
-	line, err := p.readLine()
-	if err != nil {
-		return "", err
-	}
-	return "", errors.New("RESP Error: " + line)
-}
-
-func (p *RESPParser) parseInteger() (int64, error) {
-	line, err := p.readLine()
-	if err != nil {
-		return 0, err
-	}
-	return strconv.ParseInt(line, 10, 64)
-}
-
-func (p *RESPParser) parseBulkString() (string, error) {
-	line, err := p.readLine()
-	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	length, err := strconv.Atoi(line)
-	if err != nil {
-		return "", err
-	}
-
-	if length == -1 {
-		return "", nil // Represents a NULL Bulk String in RESP
-	}
-
-	buf := make([]byte, length+2) // +2 to account for CRLF
-	_, err = io.ReadFull(p.reader, buf)
-	if err != nil {
-		return "", err
-	}
-	return string(buf[:length]), nil
-}
-
-func (p *RESPParser) parseArray() (string, interface{}, error) {
-	line, err := p.readLine()
-	if err != nil {
-		return "", nil, err
-	}
-
-	length, err := strconv.Atoi(line)
-	if err != nil {
-		return "", nil, err
-	}
-
-	if length == 0 {
-		return "", nil, nil
-	}
-
-	result := make([]interface{}, length)
-	for i := 0; i < length; i++ {
-		req, err := p.parse()
+	req := &RESPRequest{}
+	for i := 0; i < size; i++ {
+		arg, err := p.reader.ReadString('\n')
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
-		result[i] = req.Args
-	}
+		arg = strings.TrimSpace(arg)
 
-	// check for commands
-	firstEle := strings.ToUpper(result[0].(string))
-	switch firstEle {
-	case "ECHO":
-		res, err := p.handleEcho(result)
-		return "ECHO", res, err
-	case "PING":
-		res, err := p.handlePing(result)
-		return "PING", res, err
-	case "SET":
-		res, err := p.handleSet(result)
-		return "SET", res, err
-	case "GET":
-		res, err := p.handleGet(result)
-		return "GET", res, err
-	}
-
-	return "", result, nil
-}
-
-func (p *RESPParser) handlePing(result []interface{}) (interface{}, error) {
-	if len(result) == 2 {
-		if arg, ok := result[1].(string); ok {
-			arg = strings.Join([]string{"+", arg, "\r\n"}, "")
-			return arg, nil
+		if i == 0 {
+			req.Cmd = strings.ToUpper(arg)
+		} else {
+			req.Args = append(req.Args, arg)
 		}
 	}
-	return "+PONG\r\n", nil
+
+	return req, nil
 }
 
-func (p *RESPParser) handleEcho(result []interface{}) (interface{}, error) {
-	if len(result) != 2 {
-		return nil, errors.New("ECHO requires exactly one argument " + result[0].(string))
-	}
-	if arg, ok := result[1].(string); ok {
-		arg = strings.Join([]string{"+", arg, "\r\n"}, "")
-		return arg, nil
-	}
-	return nil, errors.New("invalid argument for ECHO command" + result[1].(string))
+func (p *RESPParser) parseSimpleString(line string) (*RESPRequest, error) {
+	return &RESPRequest{Cmd: line[1:], Args: nil}, nil
 }
 
-func (p *RESPParser) handleSet(result []interface{}) (interface{}, error) {
-	if len(result) <= 2 {
-		return nil, errors.New("SET requires at least two arguments " + result[0].(string))
+func (p *RESPParser) parseBulkString(line string) (*RESPRequest, error) {
+	length, err := strconv.Atoi(line[1:])
+	if err != nil {
+		return nil, err
 	}
-	key := result[1].(string)
-	value := result[2].(string)
-	elements := make([]string, 0)
-	elements = append(elements, key)
-	elements = append(elements, value)
-	if len(result) == 5 {
-		elements = append(elements, result[3].(string))
-		elements = append(elements, result[4].(string))
-	}
-	return elements, nil
 
+	bulkString := make([]byte, length+2) // +2 for \r\n
+	_, err = io.ReadFull(p.reader, bulkString)
+	if err != nil {
+		return nil, err
+	}
+
+	value := string(bulkString[:length])
+	return &RESPRequest{Cmd: "ECHO", Args: []interface{}{value}}, nil
 }
 
-func (p *RESPParser) handleGet(result []interface{}) (interface{}, error) {
-	if len(result) != 2 {
-		return nil, errors.New("GET requires exactly one argument " + result[0].(string))
+func (p *RESPParser) parseInteger(line string) (*RESPRequest, error) {
+	intVal, err := strconv.Atoi(line[1:])
+	if err != nil {
+		return nil, err
 	}
-	key := result[1].(string)
-	elements := make([]string, 0)
-	elements = append(elements, key)
-	return elements, nil
+
+	return &RESPRequest{Cmd: "INTEGER", Args: []interface{}{intVal}}, nil
 }

@@ -5,35 +5,63 @@ import (
 	"time"
 )
 
-type CacheWithTtl struct {
-	cache map[string]interface{}
-	mutex sync.Mutex
+type CacheWithTTL struct {
+	data map[string]cacheItem
+	mu   sync.RWMutex
 }
 
-func NewCacheWithTtl() *CacheWithTtl {
-	return &CacheWithTtl{
-		cache: make(map[string]interface{}),
+type cacheItem struct {
+	value  interface{}
+	expiry time.Time
+	hasTTL bool
+}
+
+// NewCacheWithTTL creates a new cache instance
+func NewCacheWithTTL() *CacheWithTTL {
+	return &CacheWithTTL{
+		data: make(map[string]cacheItem),
 	}
 }
 
-func (c *CacheWithTtl) Set(key string, val interface{}, ttl time.Duration) {
-	c.mutex.Lock()
-	c.cache[key] = val
-	c.mutex.Unlock()
+// Set adds a value to the cache with an optional TTL
+func (c *CacheWithTTL) Set(key string, value interface{}, ttl time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	// Schedule the key to be deleted after the TTL expires
+	expiry := time.Time{}
 	if ttl > 0 {
-		time.AfterFunc(ttl, func() {
-			c.mutex.Lock()
-			delete(c.cache, key)
-			c.mutex.Unlock()
-		})
+		expiry = time.Now().Add(ttl)
+	}
+
+	c.data[key] = cacheItem{
+		value:  value,
+		expiry: expiry,
+		hasTTL: ttl > 0,
 	}
 }
 
-func (c *CacheWithTtl) Get(key string) (interface{}, bool) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	val, ok := c.cache[key]
-	return val, ok
+// Get retrieves a value from the cache
+func (c *CacheWithTTL) Get(key string) (interface{}, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	item, found := c.data[key]
+	if !found {
+		return nil, false
+	}
+
+	// If the item has TTL and is expired, remove it
+	if item.hasTTL && time.Now().After(item.expiry) {
+		go c.Delete(key) // Non-blocking cleanup
+		return nil, false
+	}
+
+	return item.value, true
+}
+
+// Delete removes an item from the cache
+func (c *CacheWithTTL) Delete(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.data, key)
 }
