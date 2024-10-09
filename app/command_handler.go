@@ -9,14 +9,17 @@ import (
 )
 
 const (
-	Set  = "SET"
-	Get  = "GET"
-	Ping = "PING"
-	Echo = "ECHO"
+	Set        = "SET"
+	Get        = "GET"
+	Ping       = "PING"
+	Echo       = "ECHO"
+	Conf       = "CONFIG"
+	dir        = "dir"
+	dbfilename = "dbfilename"
 )
 
 // HandleRequest processes incoming RESP commands
-func HandleRequest(c *CacheWithTTL, req *RESPRequest) (string, error) {
+func HandleRequest(c *CacheWithTTL, req *RESPRequest, config *Config) (string, error) {
 	args, ok := req.Args.([]interface{})
 	if !ok {
 		return "", errors.New("invalid args")
@@ -30,8 +33,32 @@ func HandleRequest(c *CacheWithTTL, req *RESPRequest) (string, error) {
 		return handlePing(args)
 	case Echo:
 		return handleEcho(args)
+	case Conf:
+		return handleConfig(args, config)
+
 	default:
 		return "", fmt.Errorf("unknown command: %s", args[0])
+	}
+}
+
+func handleConfig(args []interface{}, config *Config) (string, error) {
+	if len(args) != 3 {
+		return "", errors.New("invalid args for config command")
+	}
+
+	subCmd := args[1].(string)
+	flag := args[2].(string)
+	switch subCmd {
+	case Get:
+		if strings.EqualFold(flag, dir) {
+			return fmt.Sprintf("*%d\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n", 2, len(dir), dir, len(config.Dir), config.Dir), nil
+		} else if strings.EqualFold(flag, dbfilename) {
+			return fmt.Sprintf("*%d\r\n$%d\r\n%s\n$%d\r\n%s\r\n", 2, len(dbfilename), dbfilename, len(config.Dir), config.Dir), nil
+		} else {
+			return "", fmt.Errorf("invalid flag %v for config command", flag)
+		}
+	default:
+		return "", fmt.Errorf("unknown sub command: %s for config command", subCmd)
 	}
 }
 
